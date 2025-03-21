@@ -34,7 +34,7 @@ using namespace std; // For strlen.
 /* Use the Boost asio libraries for network functions */
 using boost::asio::ip::tcp;
 
-#define EXAMPLE_VERSION 1
+#define EXAMPLE_VERSION "1.0.1"
 #define max_length 1296
 
 /*******************************************************************
