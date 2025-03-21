@@ -291,8 +291,7 @@ int main(int argc, char* argv[])
     }
   else
     {
-      
-      if (argc != 2) {
+      if (argc != 3) {
         std::cerr << "Standard usage:\n";
         std::cerr << "  MagElementTestLinux <IP Address> <port>\n";
         std::cerr << "    For example:\n";
