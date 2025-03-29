@@ -30,11 +30,12 @@ IN THE SOFTWARE.
 #include "licensetext.h"
 
 using namespace std; // For strlen.
+using namespace boost::asio;
 
 /* Use the Boost asio libraries for network functions */
 using boost::asio::ip::tcp;
 
-#define EXAMPLE_VERSION "1.0.1"
+#define EXAMPLE_VERSION "1.2.0"
 #define max_length 1296
 
 /*******************************************************************
@@ -113,6 +114,7 @@ int32_t findStartOffset (const uint8_t *haystack,
   return -1;
 }
 
+
 /* \brief Connect to the instrument, then stream data. 
     This function does not retry, or reconnect after a connection 
     failure, or exit gracefully. This is not a production program. */
@@ -147,7 +149,7 @@ int RunTcpClient (int argc, char* argv[])
                for at least one valid record, and once the program has locked on
                to the packet sequence this buffer can hold an entire packet of any
                valid type. */
-            uint8_t reply[max_length];
+            uint8_t receiveBuffer[max_length];
             
             bool found = false;
             found = false;
@@ -158,10 +160,10 @@ int RunTcpClient (int argc, char* argv[])
 
             /* Read a heartbeat's worth of data into the the buffer. Eventually one will be 
                found. */
-            size_t replyLength = boost::asio::read(s, boost::asio::buffer(reply, HEARTBEAT_LENGTH));
+            size_t receiveBufferLength = boost::asio::read(s, boost::asio::buffer(receiveBuffer, HEARTBEAT_LENGTH));
 
             /* Does the buffer include a heartbeat header? */
-            int test = findStartOffset(reply, replyLength, (uint8_t *) heartbeatStart, HEARTBEAT_START_LENGTH,
+            int test = findStartOffset(receiveBuffer, receiveBufferLength, (uint8_t *) heartbeatStart, HEARTBEAT_START_LENGTH,
                                        HEARTBEAT_LENGTH);
           
             /* If found .... */
@@ -170,10 +172,10 @@ int RunTcpClient (int argc, char* argv[])
               found = true;
 
               /* Retrieve the rest of this heartbeat. Discard it; don't process. */
-              leftover = HEARTBEAT_LENGTH - (replyLength - test);
+              leftover = HEARTBEAT_LENGTH - (receiveBufferLength - test);
               while (leftover > 0) {
-                replyLength = boost::asio::read(s, boost::asio::buffer(reply, leftover));
-                leftover -= replyLength;
+                receiveBufferLength = boost::asio::read(s, boost::asio::buffer(receiveBuffer, leftover));
+                leftover -= receiveBufferLength;
               }
             } else {
               leftover = -1;
@@ -192,37 +194,37 @@ int RunTcpClient (int argc, char* argv[])
 
         while (true) {
           counter++;
-          uint8_t reply[2000];
+          uint8_t receiveBuffer[2000];
 
           /* Read an 8-bite header. All records from MagElement include an 8-byte header.*/
           typedef uint32_t IntAndSizeHeader[2];
           IntAndSizeHeader* testHeader;
           bool recognizedRecord = false;
-	  size_t reply_length = boost::asio::read(s, boost::asio::buffer((uint8_t*)reply, sizeof(IntAndSizeHeader)));
+          size_t bytesReceived = boost::asio::read(s, boost::asio::buffer((uint8_t*)receiveBuffer, sizeof(IntAndSizeHeader)));
 
-	  /* Found? */
-          if (reply_length == 8)
+          /* Found? */
+          if (bytesReceived == 8)
             {
-              testHeader = (IntAndSizeHeader*)&reply;
+              testHeader = (IntAndSizeHeader*)&receiveBuffer;
               switch ((*testHeader)[0])
                 {
-		  /* Is the type known? */
+                  /* Is the type known? */
                 case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
                 case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
                 case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
                   recognizedRecord = true;
 
-		  /* Read the remaining part  of the packet */
-                  reply_length = boost::asio::read(s, boost::asio::buffer(reply + 8, (*testHeader)[1]-8));
+                  /* Read the remaining part  of the packet */
+                  bytesReceived = boost::asio::read(s, boost::asio::buffer(receiveBuffer + 8, (*testHeader)[1]-8));
                   switch ((*testHeader)[0])
                     {
 
-		      /* 1000Hz block packet */
+                      /* 1000Hz block packet */
                     case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
                       {
-                        StreamerPacket *streamerPacket = (StreamerPacket *) &reply;
+                        StreamerPacket *streamerPacket = (StreamerPacket *) &receiveBuffer;
           
-                        char *name = (char *) &reply;
+                        char *name = (char *) &receiveBuffer;
                         cout << counter << ":" << name << ":"
                              << MAG_DATA_AS_FLOAT(streamerPacket->mDataBlock[0].mMagData.mag1data) << ":"
                              << MAG_DATA_AS_FLOAT(streamerPacket->mDataBlock[0].mMagData.mag2data) << ":"
@@ -233,10 +235,10 @@ int RunTcpClient (int argc, char* argv[])
                       }
                       break;
 
-		      /* Decimated magnetometer packet */
+                      /* Decimated magnetometer packet */
                     case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
                       {
-                        IndexedMagElementDecimatedMagPacketWithHeader *decimatedPacket = (IndexedMagElementDecimatedMagPacketWithHeader *) &reply;
+                        IndexedMagElementDecimatedMagPacketWithHeader *decimatedPacket = (IndexedMagElementDecimatedMagPacketWithHeader *) &receiveBuffer;
           
                         cout << counter << ":"
                           //                         << ":" << GET_FID_COUNT (decimatedPacket->mIndexedPacket.mPacket.frameid)
@@ -245,10 +247,10 @@ int RunTcpClient (int argc, char* argv[])
                       }
                       break;
 
-		      /* Heartbeat/status packet */
+                      /* Heartbeat/status packet */
                     case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
                       {
-                        GmMagElementStatusPacket *statusPacket = (GmMagElementStatusPacket*)&reply;
+                        GmMagElementStatusPacket *statusPacket = (GmMagElementStatusPacket*)&receiveBuffer;
                         cout << "Status: " << statusPacket->mIndex
                              << ":" << statusPacket->mCounterAtFirstPps
                              << ":" << statusPacket->mCounterAtLastPps
@@ -263,8 +265,8 @@ int RunTcpClient (int argc, char* argv[])
                 default:
                   break;
                 }
-	      /* If the program isn't locked onto a recognized record type,
-		 then go back to the startup search function */
+              /* If the program isn't locked onto a recognized record type,
+                 then go back to the startup search function */
               if (!recognizedRecord)
                 {
                   break;
@@ -282,9 +284,173 @@ int RunTcpClient (int argc, char* argv[])
 }
 
 
+int RunUdpClient (int argc, char* argv[])
+{
+  ip::udp::endpoint remote_endpoint;
+
+  try {
+    /* Basic asio setup */
+    boost::asio::io_context io_context;
+    ip::udp::endpoint ep(ip::udp::v4(),atoi(argv[1]));
+    ip::udp::socket sock(io_context,ep);
+    
+    uint32_t counter = 0;
+
+    uint8_t receiveBuffer[max_length];
+
+    
+    while (true)
+      {
+        while (true)
+          {
+            /* Buffer into which data will be read.  It is as long or longer than
+               the longest expected packet; this means that if the instrument and the
+               network are functioning correctly, it should always include the header
+               for at least one valid record, and once the program has locked on
+               to the packet sequence this buffer can hold an entire packet of any
+               valid type. */
+            
+            bool found = false;
+            found = false;
+
+            /* Look for heartbeat records; we should always get one within about 1 second,
+               if the MagElement is functioning correctly */
+            int leftover = -1;
+
+            /* Read a heartbeat's worth of data into the the buffer. Eventually one will be 
+               found. */
+            size_t bytesReceived = sock.receive_from(boost::asio::buffer(receiveBuffer, max_length),
+                                                           remote_endpoint);
+            cout << bytesReceived << std::endl;
+            //size_t bytesReceived = boost::asio::read(s, boost::asio::buffer(receiveBuffer, HEARTBEAT_LENGTH));
+
+            /* Does the buffer include a heartbeat header? */
+            int test = findStartOffset(receiveBuffer, bytesReceived, (uint8_t *) heartbeatStart, HEARTBEAT_START_LENGTH,
+                                       HEARTBEAT_LENGTH);
+          
+            /* If found .... */
+            if (test >= 0) {
+              /* This program is now locked on. */
+              found = true;
+            }
+
+            /* If locked on, exit this loop... */
+            if (found)
+              {
+                printf ("Found heartbeat.\n");
+                break;
+              }
+            /* Else continue looking ... */
+          }
+      
+        /* Locked on; read records */
+
+        while (true) {
+          counter++;
+
+          /* Read an 8-byte header. All records from MagElement include an 8-byte header.*/
+          typedef uint32_t IntAndSizeHeader[2];
+          IntAndSizeHeader* testHeader;
+          bool recognizedRecord = false;
+          size_t bytesReceived = sock.receive_from( boost::asio::buffer((uint8_t*)receiveBuffer, max_length),remote_endpoint);
+
+          /* Found? */
+          if (bytesReceived >  8)
+            {
+              testHeader = (IntAndSizeHeader*)&receiveBuffer;
+              switch ((*testHeader)[0])
+                {
+                  /* Is the type known? */
+                case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
+                case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
+                case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
+                  recognizedRecord = true;
+
+                  /* Read the remaining part  of the packet */
+                  //              cout<<"Remaining: " << ((*testHeader)[1])-8 << std::endl;
+                  //                  bytesReceived = sock.receive_from (boost::asio::buffer(receiveBuffer + 8, ((*testHeader)[1])-8),remote_endpoint);
+                  //        cout << bytesReceived << std::endl;
+                  switch ((*testHeader)[0])
+                    {
+
+                      /* 1000Hz block packet */
+                    case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
+                      {
+                        StreamerPacket *streamerPacket = (StreamerPacket *) &receiveBuffer;
+          
+                        char *name = (char *) &receiveBuffer;
+                        cout << counter << ":" << name << ":"
+                             << MAG_DATA_AS_FLOAT(streamerPacket->mDataBlock[0].mMagData.mag1data) << ":"
+                             << MAG_DATA_AS_FLOAT(streamerPacket->mDataBlock[0].mMagData.mag2data) << ":"
+                             << streamerPacket->mDataBlock[0].mAnalogs.adc0 << ":"
+                             << streamerPacket->mDataBlock[0].mAnalogs.adc1 << ":"
+                             << streamerPacket->mDataBlock[0].mAnalogs.adc2 << ":"
+                             << streamerPacket->mDataBlock[0].mAnalogs.adc3 << "\n";
+                      }
+                      break;
+
+                      /* Decimated magnetometer packet */
+                    case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
+                      {
+                        IndexedMagElementDecimatedMagPacketWithHeader *decimatedPacket = (IndexedMagElementDecimatedMagPacketWithHeader *) &receiveBuffer;
+          
+                        cout << counter << ":"
+                          //                         << ":" << GET_FID_COUNT (decimatedPacket->mIndexedPacket.mPacket.frameid)
+                             << ":" << decimatedPacket->mIndexedPacket.mPacket.mMagData
+                             << "\n";
+                      }
+                      break;
+
+                      /* Heartbeat/status packet */
+                    case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
+                      {
+                        GmMagElementStatusPacket *statusPacket = (GmMagElementStatusPacket*)&receiveBuffer;
+                        cout << "Status: " << statusPacket->mIndex
+                             << ":" << statusPacket->mCounterAtFirstPps
+                             << ":" << statusPacket->mCounterAtLastPps
+                             << ":" << statusPacket->mMfamStatus[0]
+                             << ":" << statusPacket->mMfamStatus[1]
+                             << ":" << statusPacket->mMfamStatus[2]
+                             << ":" << statusPacket->mMfamStatus[3]
+                             << "\n";
+                      }
+                      break;
+                    }
+                  break;
+                default:
+                  cout << "Unrecognized.\n";
+                  break;
+                }
+              /* If the program isn't locked onto a recognized record type,
+                 then go back to the startup search function */
+              if (!recognizedRecord)
+                {
+                  break;
+                }
+            }
+        }
+      }
+  }
+  catch (std::exception &e) {
+    /* Simplest possible error handling: This program (which is not
+       a production program, will exit with some raw error information */
+    std::cerr << "Exception: " << e.what() << "\n";
+  }
+  return 0;
+}
+
+#ifdef _WIN32
+#define APPLICATION_NAME "MagElementTestWindows"
+#else
+#define APPLICATION_NAME "MagElementTestLinux"
+#endif
+
+
+
 int main(int argc, char* argv[])
 {
-  std::cout << "MagElementTestLinux version " << EXAMPLE_VERSION << std::endl;
+  std::cout << "===========================================================\n";
+  std::cout << APPLICATION_NAME << " version " << EXAMPLE_VERSION << std::endl;
   if ((argc == 2) && (strcmp (argv[1], "LICENSE") == 0))
     {
       std::cout << licenseText;
@@ -292,16 +458,52 @@ int main(int argc, char* argv[])
   else
     {
       if (argc != 3) {
-        std::cerr << "Standard usage:\n";
-        std::cerr << "  MagElementTestLinux <IP Address> <port>\n";
-        std::cerr << "    For example:\n";
-        std::cerr << "      MagElementTestLinux 192.168.10.3 1000\n";
-        std::cerr << "View license:\n";
-        std::cerr << "  MagElementTestLinux LICENSE | more\n";
+        std::cout <<
+R"(
+TCP streaming:
+  MagElementTestLinux <IP Address> <port>
+  For example:
+     MagElementTestLinux 192.168.10.3 1000
+       or
+     MagElementTestWindows 192.168.10.3 1000
+
+  UDP streaming:
+    MagElementTestLinux <port> udp
+    For example:
+     MagElementTestLinux 2000 udp
+       or
+     MagElementTestWindows 2000 udp   
+    
+
+View license:
+  MagElementTestLinux LICENSE | more
+    or
+  MagElementTestWindows LICENSE : more
+
+In TCP mode, this program attempts to
+connect to a MagElement, at the specified address, 
+on the specified port. If the instrument is listening 
+on that port, it accepts the connection and starts 
+streaming data.
+
+In UDP mode, this program listens on the specified
+port for data from a MagElement that has been 
+configured to send data to this computer on that port.
+)";
+  std::cout << "===========================================================\n";
+        
+        
         return 1;
       }
 
-      return RunTcpClient (argc,argv);
+      if (strcmp(argv[2],"udp") == 0)
+	{
+	  return RunUdpClient (argc,argv);
+	}
+      else
+	{
+	  return RunTcpClient (argc,argv);
+	}
     }
 }
 
