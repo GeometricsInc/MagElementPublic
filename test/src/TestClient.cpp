@@ -114,7 +114,7 @@ const    uint32_t     HEARTBEAT_START_LENGTH = 8;
 
 
 /* \brief Find the location of a sequence of bytes (the needle) 
-     within a larger sequence (the haystack).
+   within a larger sequence (the haystack).
    \return  - 1 :     - Not found.
    \return  0,1,2...  - Needle found at that index in the haystack.
 */
@@ -265,18 +265,18 @@ int RunTcpClient (MagElementTestOptions &options, FILE *outputFile)
     
     while (true)
       {
-	  if (sShutDown)
-	    {
-	      fclose (outputFile);
-	      return 0;
-	    }
+	if (sShutDown)
+	  {
+	    fclose (outputFile);
+	    return 0;
+	  }
 	while (true)
 	  {
-	  if (sShutDown)
-	    {
-	      fclose (outputFile);
-	      return 0;
-	    }
+	    if (sShutDown)
+	      {
+		fclose (outputFile);
+		return 0;
+	      }
 	    /* Buffer into which data will be read.  It is as long or longer than
 	       the longest expected packet; this means that if the instrument and the
 	       network are functioning correctly, it should always include the header
@@ -318,7 +318,7 @@ int RunTcpClient (MagElementTestOptions &options, FILE *outputFile)
 	    /* If locked on, exit this loop... */
 	    if (found)
 	      {
-		printf ("Found heartbeat.\n");
+		printf ("Found status record; synced.\n");
 		break;
 	      }
 	    /* Else continue looking ... */
@@ -402,9 +402,13 @@ int RunTcpClient (MagElementTestOptions &options, FILE *outputFile)
   return 0;
 }
 
-
 int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
 {
+  if (options.mVerboseMode)
+    {
+      cerr << "Running UDP... \n";
+    }
+
   ip::udp::endpoint remote_endpoint;
 
   try {
@@ -417,23 +421,23 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
     
     while (true)
       {
-	  if (sShutDown)
-	    {
-	      fclose (outputFile);
-	      return(0);
-	    }
+	if (sShutDown)
+	  {
+	    fclose (outputFile);
+	    return(0);
+	  }
 	while (true)
 	  {
-	  if (sShutDown)
-	    {
-	      fclose (outputFile);
-	      return(0);
-	    }
-	    int character = cin.peek();
-	    if (character == 'q')
+	    if (sShutDown)
 	      {
-		break;
+		fclose (outputFile);
+		return(0);
 	      }
+	    if (options.mVerboseMode)
+	      {
+		cerr << "Searching for records....\n";
+	      }
+
 	    /* Buffer into which data will be read.  It is as long or longer than
 	       the longest expected packet; this means that if the instrument and the
 	       network are functioning correctly, it should always include the header
@@ -453,7 +457,8 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
 	       found. */
 	    size_t replyLength = sock.receive_from(boost::asio::buffer(reply, max_length),
 						   remote_endpoint);
-	    cout << replyLength << std::endl;
+	    
+	    //cout << "Got data: " << replyLength << "bytes.\n";
 	    //size_t replyLength = boost::asio::read(s, boost::asio::buffer(reply, HEARTBEAT_LENGTH));
 
 	    /* Does the buffer include a heartbeat header? */
@@ -478,11 +483,13 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
 	/* Locked on; read records */
 
 	while (true) {
+	  
 	  if (sShutDown)
 	    {
 	      fclose (outputFile);
 	      return(0);
 	    }
+	  
 	  counter++;
 	  uint8_t reply[2000];
 
@@ -511,24 +518,24 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
 		      /* 1000Hz block packet */
 		    case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
 		      {
-		      StreamerPacket *streamerPacket = (StreamerPacket *) &reply;
-		      HandleRawDataBlock (streamerPacket, counter, options, outputFile);
+			StreamerPacket *streamerPacket = (StreamerPacket *) &reply;
+			HandleRawDataBlock (streamerPacket, counter, options, outputFile);
 		      }
 		      break;
 
 		      /* Decimated magnetometer packet */
 		    case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
 		      {
-		      IndexedMagElementDecimatedMagPacketWithHeader *decimatedPacket = (IndexedMagElementDecimatedMagPacketWithHeader *) &reply;
-		      HandleDecimatedPacket (decimatedPacket, counter, options, outputFile);
+			IndexedMagElementDecimatedMagPacketWithHeader *decimatedPacket = (IndexedMagElementDecimatedMagPacketWithHeader *) &reply;
+			HandleDecimatedPacket (decimatedPacket, counter, options, outputFile);
 		      }
 		      break;
 
 		      /* Heartbeat/status packet */
 		    case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
 		      {
-		      GmMagElementStatusPacket *statusPacket = (GmMagElementStatusPacket*)&reply;
-		      HandleStatusPacket (statusPacket, counter, options, outputFile);
+			GmMagElementStatusPacket *statusPacket = (GmMagElementStatusPacket*)&reply;
+			HandleStatusPacket (statusPacket, counter, options, outputFile);
 		      }
 		      break;
 		    }
@@ -560,6 +567,121 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
   return 0;
 }
 
+/* Validate the content of a MagElement data file. */
+int RunFileCheck (MagElementTestOptions &options, FILE *inputFile)
+{
+  if (options.mVerboseMode)
+    {
+      cerr << "Running File check... \n";
+    }
+
+  try
+    {
+      uint64_t counter = 0;
+
+      while (true)
+	{
+	  /* Read the record header. */
+
+	  uint8_t recordData[max_length];
+
+	  size_t bytesRead = fread (recordData, 1, 8, inputFile);
+
+	  if (bytesRead != 8)
+	    {
+	      fclose (inputFile);
+	      break;
+	    }
+
+	  typedef uint32_t IntAndSizeHeader[2];
+	  IntAndSizeHeader* testHeader;
+	  bool recognizedRecord = false;
+	  testHeader = (IntAndSizeHeader*)&recordData;
+
+	  int remaining = 0;
+
+	  /* Read the rest of the data */
+	  switch ((*testHeader)[0])
+	    {
+	      /* 1000Hz block packet */
+	    case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
+	      {
+		recognizedRecord = true;
+		remaining = sizeof (StreamerPacket) - 8;
+		break;
+	      }
+
+	      /* Decimated magnetometer packet */
+	    case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
+	      {
+		recognizedRecord = true;
+		remaining = sizeof (IndexedMagElementDecimatedMagPacketWithHeader) - 8;
+		break;
+	      }
+	      break;
+
+	      /* Heartbeat/status packet */
+	    case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
+	      {
+		recognizedRecord = true;
+		remaining = sizeof (GmMagElementStatusPacket) - 8;
+		break;
+	      }
+	      break;
+	    }
+
+	  if (!recognizedRecord)
+	    {
+	      fclose (inputFile);
+	      break;
+	    }
+
+	  /* Read the remaining data in the record. */
+	  bytesRead = fread (recordData + 8, 1, remaining, inputFile);
+
+	  if (bytesRead != remaining)
+	    {
+	      std::cerr << "Can't read remaining part of record " << counter << "\n";
+	      break;
+	    }
+	
+	  switch ((*testHeader)[0])
+	    {
+	      /* 1000Hz block packet */
+	    case GM_MFAM_DEVKIT_BLOCK_WITH_EMPTY_ADCS_NO_GPS:
+	      {
+		/* Read the rest of the data */
+		StreamerPacket *streamerPacket = (StreamerPacket *) &recordData;
+		HandleRawDataBlock (streamerPacket, counter, options, nullptr);
+	      }
+	      break;
+
+	      /* Decimated magnetometer packet */
+	    case GM_MAG_ELEMENT_DECIMATED_OUTPUT_FORMAT:
+	      {
+		IndexedMagElementDecimatedMagPacketWithHeader *decimatedPacket = (IndexedMagElementDecimatedMagPacketWithHeader *) &recordData;
+		HandleDecimatedPacket (decimatedPacket, counter, options, nullptr);
+	      }
+	      break;
+
+	      /* Heartbeat/status packet */
+	    case GM_MAG_ELEMENT_HEARTBEAT_FORMAT:
+	      {
+		GmMagElementStatusPacket *statusPacket = (GmMagElementStatusPacket*)&recordData;
+		HandleStatusPacket (statusPacket, counter, options, nullptr);
+	      }
+	      break;
+	    }
+	}
+    }
+  catch (std::exception &e) {
+    /* Simplest possible error handling: This program (which is not
+       a production program, will exit with some raw error information */
+    std::cerr << "Exception: " << e.what() << "\n";
+  }
+  return 0;
+}
+
 #ifdef _WIN32
 #define APPLICATION_NAME "MagElementTestWindows"
 #else
@@ -575,15 +697,30 @@ int main(int argc, char* argv[])
   FILE *pFile = nullptr;
   if (options.mValid && options.mFileIsValid)
     {
-      pFile = fopen (options.mFileNameToSave.data(),"wb");
-
-      if (pFile == nullptr)
+      if (options.mAcceptUdp || options.mAcceptTcp)
 	{
-	  std::cerr << "\n\nError: Output file "
-		    << options.mFileNameToSave
-		    << "can't be opened to save data\n\n";
-	  options.mValid = false;
-	} ;
+	  pFile = fopen (options.mFileNameToSave.data(),"wb");
+
+	  if (pFile == nullptr)
+	    {
+	      std::cerr << "\n\nError: Output file "
+			<< options.mFileNameToSave
+			<< "can't be opened to save data\n\n";
+	      options.mValid = false;
+	    } ;
+	}
+      else if (options.mRunFileCheck)
+	{
+	  pFile = fopen (options.mFileNameToSave.data(),"rb");
+
+	  if (pFile == nullptr)
+	    {
+	      std::cerr << "\n\nError: Data file "
+			<< options.mFileNameToSave
+			<< "can't be opened to validate data\n\n";
+	      options.mValid = false;
+	    } ;
+	}
     }
 
   if (!options.mValid)
@@ -606,6 +743,7 @@ int main(int argc, char* argv[])
   else
     {
       std::thread commandWatcher(WaitForCommand);
+      commandWatcher.detach();
       
       if (options.mAcceptUdp)
 	{
@@ -614,6 +752,10 @@ int main(int argc, char* argv[])
       else if (options.mAcceptTcp)
 	{
 	  return RunTcpClient (options, pFile);
+	}
+      else if (options.mRunFileCheck)
+	{
+	  return RunFileCheck (options, pFile);
 	}
     }
   return 0;

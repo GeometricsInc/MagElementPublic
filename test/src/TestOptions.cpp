@@ -156,6 +156,10 @@ MagElementTestOptions::MagElementTestOptions (int countArgs, char *argv[])
 	    {
 	      mAcceptTcp = true;
 	    }
+	  else if  (nextArg == "file-check")
+	    {
+	      mRunFileCheck = true;
+	    }
 	}
       else if (nextArg == "-LICENSE")
 	{
@@ -189,7 +193,22 @@ MagElementTestOptions::MagElementTestOptions (int countArgs, char *argv[])
 	}
       else if (nextArg == "-port")
 	{
+	  index++;
+	  if (countArgs <= index)
+	    {
+	      mValid = false;
+	      std::cerr << "\n\nError: -port needs to be followed by a valid IP port number\n\n";
+	      return;
+	    }
+	  nextArg = std::string { argv[index]};
+	  if (!removeQuotes (nextArg))
+	    {
+	      std::cerr << "\n\nError: -addr needs to be followed by a valid IP port number\n\n";
+	      mValid = false;
+	      return;
+	    }
 	  try {
+	    std::cerr << "Port: " << nextArg << "\n";
 	    uint32_t portNumber = std::stoul(nextArg);
 	    if ((portNumber == 0)||(portNumber > 65535))
 	      {
@@ -204,6 +223,7 @@ MagElementTestOptions::MagElementTestOptions (int countArgs, char *argv[])
 	      std::cerr << "Invalid port number.\n\n";
 	      return;
 	    }
+	  mRemotePortIsValid = true;
 	  mRemotePort = nextArg;
 	}
       else if (nextArg == "-file")
@@ -222,13 +242,6 @@ MagElementTestOptions::MagElementTestOptions (int countArgs, char *argv[])
 	      mValid = false;
 	      return;
 	    }
-	  if (std::filesystem::exists(nextArg))
-	    {
-	      std::cerr << "\n\nError: Output file already exists.\n\n";
-	      mValid = false;
-	      return;
-	    }
-	  
 	  mFileNameToSave = nextArg;
 	  mFileIsValid = true;
 	}
@@ -271,18 +284,58 @@ MagElementTestOptions::MagElementTestOptions (int countArgs, char *argv[])
 	};
       
     };
-  if ((!(mAcceptUdp || mAcceptTcp))||(mAcceptUdp && mAcceptTcp))
+
+  int protocolsChecked = (mAcceptUdp ? 1 : 0) +
+    (mAcceptTcp ? 1 : 0) + (mRunFileCheck ? 1 : 0);
+
+if (protocolsChecked != 1)
     {
-      std::cerr << "\n\nError: Either tcp or udp must be selected.\n\n";
+      std::cerr << "\n\nError: Choose exactly 1 protocol.\n\n";
       mValid = false;
       return;
     }
-  if (!mRemoteIsValid)
+  if (mAcceptTcp && !mRemotePortIsValid)
     {
-      std::cerr << "\n\nError: Not a valid remote IP address.\n\n";
+      std::cerr << "\n\nError: TCP port is not valid.\n\n";
       mValid = false;
       return;
     }
+  if (mAcceptUdp && !mRemotePortIsValid)
+    {
+      std::cerr << "\n\nError: UDP port is not valid.\n\n";
+      mValid = false;
+      return;
+    }
+  
+  if (mAcceptTcp && !mRemoteIsValid)
+    {
+      std::cerr << "\n\nError: Not a valid remote IP address for TCP.\n\n";
+      mValid = false;
+      return;
+    }
+
+  if (mFileIsValid)
+    {
+      if (mAcceptUdp || mAcceptTcp)
+	{
+	  if (std::filesystem::exists(mFileNameToSave))
+	    {
+	      std::cerr << "\n\nError: Output file already exists.\n\n";
+	      mValid = false;
+	      return;
+	    }
+	}
+      else if (mRunFileCheck)
+	{
+	  if (!std::filesystem::exists(mFileNameToSave))
+	    {
+	      std::cerr << "\n\nError: File does not exist for file check.\n\n";
+	      mValid = false;
+	      return;
+	    }
+	}
+    }
+	  
   mValid = true;
 }
 

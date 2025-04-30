@@ -34,10 +34,12 @@ struct MagElementTestOptions
   bool         mFileIsValid = false;
   bool         mAcceptTcp = false;
   bool         mAcceptUdp = false;
+  bool         mRunFileCheck = false;
   std::string  mRemote;
   bool         mRemoteIsValid = false;
   bool         mLicenseRequest = false;
   std::string  mRemotePort;
+  bool         mRemotePortIsValid = false;
   bool         mValid = false;
   bool         mVerboseMode = true;
 };

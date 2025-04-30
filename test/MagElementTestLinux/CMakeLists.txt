@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.27)
 project(MagElementTestLinux)
 
 set(CMAKE_CXX_STANDARD 20)
-add_executable(MagElementTestLinux ../src/TcpConnectionTest.cpp ../src/TestOptions.cpp)
+add_executable(MagElementTestLinux ../src/TestClient.cpp ../src/TestOptions.cpp)
 
 include_directories(. ../include ../../../boost_1_83_0)
 
