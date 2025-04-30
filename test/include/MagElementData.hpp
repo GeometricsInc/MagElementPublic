@@ -105,18 +105,6 @@ typedef struct PACKED_SPEC s_PacketIndex
   uint64_t   uiPacketIndex;  // Offset 0, length 8
 } PacketIndex;  // Packet size is 8
 
-/* Basic MFAM with indexing */
-PACKED_PRAGMA
-typedef struct PACKED_SPEC s_IndexedSpiPacket {
-  PacketIndex    piIndex;
-  MfamSpiPacket  mMfamSpiPacket;
-} IndexedMfamSpiPacket ALIGN_1_SPEC;  // structure size is 32
-
-/* Forward definition for function ToOldData */
-PACKED_PRAGMA
-struct   IndexedMfamSpiPacketWithHeader;
-
-
 // -------- MFAM Filtered packet with indexing added.  -----------------
 struct PACKED_SPEC IndexedMfamFilteredPacket {
   PacketIndex      piIndex;                // Offset 0, length 8
@@ -126,8 +114,7 @@ struct PACKED_SPEC IndexedMfamFilteredPacket {
 PACKED_PRAGMA
 typedef struct PACKED_SPEC s_IndexedMfamFilteredPacketWithHeader
 {
-  /* dwRecordType should be GM_MFAM_FILTERED_INDEXED_W_HEADER or GM_MFAM_MAGBASE_INDEXED_W_HEADER
-   * or GM_MFAM_MAGGRAD_INDEXED_W_HEADER   */
+  /* dwRecordType should be GM_MFAM_FILTERED_INDEXED_W_HEADER*/
   DWORD                      dwRecordType;  // Offset 0, length 4
   uint32_t                     uRecordSize; // Offset 4, length 4
   IndexedMfamFilteredPacket  imspData;      // Offset 8, length 80
@@ -136,10 +123,8 @@ typedef struct PACKED_SPEC s_IndexedMfamFilteredPacketWithHeader
 
 //#warning These should be changed to hard-coded numbers, with asserts to verify that they match sizeof, \
   so that compiler packing is getting checked at compile time.
-#define GM_SIZEOF_INDEXED_SPI_W_HEADER (sizeof(IndexedMfamSpiPacketWithHeader))
+//#define GM_SIZEOF_INDEXED_SPI_W_HEADER (sizeof(IndexedMfamSpiPacketWithHeader))
 #define GM_SIZEOF_INDEXED_MFAM_FILTERED_W_HEADER (sizeof(IndexedMfamFilteredPacketWithHeader))
-#define GM_SIZEOF_INDEXED_MFAM_MAGBASE_W_HEADER (GM_SIZEOF_INDEXED_MFAM_FILTERED_W_HEADER)
-#define GM_SIZEOF_INDEXED_MFAM_MAGGRAD_W_HEADER (GM_SIZEOF_INDEXED_MFAM_FILTERED_W_HEADER)
 
 /* Number of MFAM records in a block packet */
 #define MFAM_STREAMER_CACHE_SIZE 40
@@ -306,9 +291,9 @@ public:
   uint16_t mFpgaTemperature;/* Offset 72 */
   uint16_t mBoardTemperature;/* Offset 74 */
   uint32_t mSystemFaults; /* TBD: SD card status, etc.? *//* Offset 76 */
-  uint32_t mMfamFaults;   /* Fault bits, System FaultID, Mag1FaultID, Mag2FaultID *//* Offset 80 */
+  uint32_t mReserved2;   /* Fault bits, System FaultID, Mag1FaultID, Mag2FaultID *//* Offset 80 */
   uint16_t mMfamStatus[4];   /* FrameId, SysStat, Mag1Stat and Mag2Stat from MFAM *//* Offset 84 */
-  uint8_t  mReserved[16];/* Offset 92 */
+  uint8_t  mReserved1[16];/* Offset 92 */
 } ALIGN_1_SPEC ; /* Size 108 */
 
 /* Check on compiler packing */

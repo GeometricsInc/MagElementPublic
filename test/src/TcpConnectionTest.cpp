@@ -40,6 +40,7 @@ using namespace boost::asio;
 /* Use the Boost asio libraries for network functions */
 using boost::asio::ip::tcp;
 
+#define EXAMPLE_VERSION "1.2.3"
 #define max_length 1296
 
 /* Functions watch this variable in order to produce an
@@ -559,12 +560,16 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
   return 0;
 }
 
-
+#ifdef _WIN32
+#define APPLICATION_NAME "MagElementTestWindows"
+#else
+#define APPLICATION_NAME "MagElementTestLinux"
+#endif
 
 int main(int argc, char* argv[])
 {
-  std::cout << "MagElementTestLinux version " << EXAMPLE_VERSION << std::endl;
-
+  std::cout << "===========================================================\n";
+  std::cout << APPLICATION_NAME << " version " << EXAMPLE_VERSION << std::endl;
   MagElementTestOptions options {argc,argv};
 
   FILE *pFile = nullptr;
