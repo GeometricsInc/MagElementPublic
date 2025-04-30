@@ -23,6 +23,9 @@ test/MagElementTestclient/cmake-build-debug/MagElementTestClient
 *.h#
 *.h~
 *~
+*.cpp~
+*.hpp~
+
 extras/Tiva_Interface_EK_EB1_1292/Release
 extras/Tiva_Interface_EK_EB1_1292/Debug
 extras/Tiva_Interface_EK_EB1_1292/.config
