@@ -25,15 +25,15 @@ const char *sHelpText = R"(Usages:
    MagElementTestWindows [OPTION]....
 
 Examples:
-  MagElementTestLinux -protocol tcp -addr 192.168.10.3 -port 1000
-  MagElementTestLinux -protocol tcp -addr 192.168.10.3 -port 1000
-  MagElementTestWindows -protocol udp -port 2000 -file "savefile.bin"
-  MagElementTestWindows -protocol file-check -file "savefile.bin" 			   
+  MagElementTestLinux -proto tcp -addr 192.168.10.3 -port 1000
+  MagElementTestLinux -proto tcp -addr 192.168.10.3 -port 1000
+  MagElementTestWindows -proto udp -port 2000 -file "savefile.bin"
+  MagElementTestWindows -proto file-check -file "savefile.bin" 			   
   MagElementTestLinux -LICENSE
   
 
 Options:
--protocol      [tcp | udp | file-check ] : tcp and udp are communications protocols
+-proto      [tcp | udp | file-check ] : tcp and udp are communications protocols
                    to receive data from a MagElement.  file-check is a command
                    to check the validity of the data in a data file collected
                    via udp or tcp

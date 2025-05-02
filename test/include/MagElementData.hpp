@@ -298,8 +298,6 @@ public:
 
 /* Check on compiler packing */
 static_assert ((sizeof(GmMagElementStatusPacket) == 108),"Not expected size");
-
-extern "C" uint16_t ParseMfamSystemStatus (const uint16_t uiSystemStatus);
   
 #endif /* GMMFAMDATA_HPP_ */
 

@@ -26,7 +26,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\TcpConnectionTest.cpp">
+    <ClCompile Include="..\src\TestOptions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\TestClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

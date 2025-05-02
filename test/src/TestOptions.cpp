@@ -63,7 +63,7 @@ bool removeQuotes (std::string &s)
   return true;
 }
 
-bool isValidIpAddress (char *candidate)
+bool isValidIpAddress (const char *candidate)
 {
   std::string test{candidate};
   ltrim(test);

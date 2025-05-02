@@ -22,10 +22,13 @@ IN THE SOFTWARE.
 #ifndef TEST_OPTIONS_HPP
 #define TEST_OPTIONS_HPP
 
+#include <gmplatform.h>
+
 #define MAG_ELEMENT_MAX_PATH_LENGTH   255
 #define MAG_ELEMENT_IP_ADDR_MAX_LENGTH 15
 
-struct MagElementTestOptions
+PACKED_PRAGMA
+struct PACKED_SPEC MagElementTestOptions
 {
   MagElementTestOptions ( int countArgs, char *argv[] );
     
@@ -42,6 +45,6 @@ struct MagElementTestOptions
   bool         mRemotePortIsValid = false;
   bool         mValid = false;
   bool         mVerboseMode = true;
-};
+} ALIGN_1_SPEC;
 
 #endif
