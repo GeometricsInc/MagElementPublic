@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\gmplatform.h" />
+    <ClInclude Include="..\include\helptext.h" />
     <ClInclude Include="..\include\licensetext.h" />
     <ClInclude Include="..\include\MagElementData.hpp" />
   </ItemGroup>

@@ -24,6 +24,9 @@
     <ClInclude Include="..\include\MagElementData.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\helptext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\TestOptions.cpp">
