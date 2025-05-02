@@ -26,6 +26,7 @@ IN THE SOFTWARE.
 #include <fstream>
 #include <vector>
 #include <filesystem>
+#include <algorithm>
 #include "TestOptions.hpp"
 
 void ltrim(std::string &s) {
