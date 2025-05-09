@@ -21,7 +21,7 @@ IN THE SOFTWARE.
 ******************************************************************************/
 
 /* See LICENSE file for additional licenses */
-#define EXAMPLE_VERSION "1.2.5"
+#define EXAMPLE_VERSION "1.2.6"
 
 
 #include <cstdlib>
@@ -265,16 +265,14 @@ int RunTcpClient (MagElementTestOptions &options, FILE *outputFile)
     
     while (true)
       {
-	if (sShutDown)
-	  {
-	    fclose (outputFile);
-	    return 0;
-	  }
 	while (true)
 	  {
 	    if (sShutDown)
 	      {
-		fclose (outputFile);
+		if (outputFile != nullptr)
+		  {
+		    fclose (outputFile);
+		  }
 		return 0;
 	      }
 	    /* Buffer into which data will be read.  It is as long or longer than
@@ -329,7 +327,10 @@ int RunTcpClient (MagElementTestOptions &options, FILE *outputFile)
 	while (true) {
 	  if (sShutDown)
 	    {
-	      fclose (outputFile);
+	      if (outputFile != nullptr)
+		{
+		  fclose (outputFile);
+		}
 	      return (0);
 	    }
 	  counter++;
@@ -421,16 +422,14 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
     
     while (true)
       {
-	if (sShutDown)
-	  {
-	    fclose (outputFile);
-	    return(0);
-	  }
 	while (true)
 	  {
 	    if (sShutDown)
 	      {
-		fclose (outputFile);
+		if (outputFile != nullptr)
+		  {
+		    fclose (outputFile);
+		  }
 		return(0);
 	      }
 	    if (options.mVerboseMode)
@@ -486,7 +485,10 @@ int RunUdpClient (MagElementTestOptions &options, FILE *outputFile)
 	  
 	  if (sShutDown)
 	    {
-	      fclose (outputFile);
+	      if (outputFile != nullptr)
+		{
+		  fclose (outputFile);
+		}
 	      return(0);
 	    }
 	  
