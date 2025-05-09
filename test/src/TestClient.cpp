@@ -21,7 +21,7 @@ IN THE SOFTWARE.
 ******************************************************************************/
 
 /* See LICENSE file for additional licenses */
-#define EXAMPLE_VERSION "1.2.4"
+#define EXAMPLE_VERSION "1.2.5"
 
 
 #include <cstdlib>

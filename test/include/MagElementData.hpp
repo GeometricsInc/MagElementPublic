@@ -83,7 +83,7 @@ typedef struct PACKED_SPEC s_MfamFloatPacket {
   uint16_t mag2stat;   // Offset 14, length 2
   double mag2data;     // Offset 16, length 8
     
-  // Auxiliary fields.
+  /* Auxiliary fields. */
   float  mTemperature,     // Offset 24, length 4
     mCompassX,        // Offset 28, length 4
     mCompassY,        // Offset 32, length 4
@@ -114,9 +114,9 @@ struct PACKED_SPEC IndexedMfamFilteredPacket {
 PACKED_PRAGMA
 typedef struct PACKED_SPEC s_IndexedMfamFilteredPacketWithHeader
 {
-  /* dwRecordType should be GM_MFAM_FILTERED_INDEXED_W_HEADER*/
+  /* dwRecordType should be GM_MFAM_FILTERED_INDEXED_W_HEADER */
   DWORD                      dwRecordType;  // Offset 0, length 4
-  uint32_t                     uRecordSize; // Offset 4, length 4
+  uint32_t                   uRecordSize; // Offset 4, length 4
   IndexedMfamFilteredPacket  imspData;      // Offset 8, length 80
 } IndexedMfamFilteredPacketWithHeader ALIGN_1_SPEC;  // structure size is 88
 
@@ -215,9 +215,18 @@ public:
 /* Some useful MFAM data values, masks, and types.              */
 /****************************************************/
 #define FID_COUNT_MASK 0x7FF
-#define AUX_DATA_MASK  0x3800
+
 #define MAG_1_VALID    0x4000
 #define MAG_2_VALID    0x8000
+
+/* MFAM records cycle through several types
+ *  that are specified in frameid,
+ *  in the bits masked in AUX_DATA_MASK  */
+#define AUX_DATA_MASK  0x3800
+
+/* Record types specified
+ *  in (frameid & AUX_DATA_MASK) 
+ */
 #define COMPASS_MASK   0x800
 #define SERIAL_MASK    0x3800
 #define GYRO_MASK      0x1000
@@ -229,32 +238,51 @@ public:
 #define IS_MAG1_VALID(x)  ((x) & MAG_1_VALID)
 #define IS_MAG2_VALID(x)  ((x) & MAG_2_VALID)
 
+
+/** Get the fiducial number of an MFAM record.
+ * Example:
+ *     MfamSpiPacket *packet  = GetAPacketSomeHow ();
+ *     uint16_t counter       = GET_FID_COUNT (packet->frameid);
+*/
 #define GET_FID_COUNT(x)  ((x) & FID_COUNT_MASK)
 
-#define IS_COMPASS(x)     ((((x) & COMPASS_MASK)==COMPASS_MASK)
-#define IS_GYRO(x)        ((((x) & GYRO_MASK)==GYRO_MASK)
-#define IS_ACCEL(x)       (((x) & ACCEL_MASK)==ACCEL_MASK)
-#define IS_SERIAL(x)      (((x) & SERIAL_V_MASK)==SERIAL_V_MASK)
+/** Macros to detect the record type of an MFAM record.
+ * Example:
+ *     MfamSpiPacket *packet  = GetAPacketSomeHow ();
+ *     bool   isCompassRecord = IS_COMPASS (packet->frameid);
+*/
+#define IS_COMPASS(x)     ((((x) & AUX_DATA_MASK)==COMPASS_MASK)
+#define IS_GYRO(x)        ((((x) & AUX_DATA_MASK)==GYRO_MASK)
+#define IS_ACCEL(x)       (((x)  & AUX_DATA_MASK)==ACCEL_MASK)
+#define IS_SERIAL(x)      (((x)  & AUX_DATA_MASK)==SERIAL_V_MASK)
 
-
+/** Bitmasks in MfamSpiPacket.sysstat */
 #define LOCK_MASK    0x4000
 #define PPS_MASK     0x8000
 #define FAILURE_MASK 0x1
 
-#define IS_PPS_RECEIVED(x)   ((x) & PPS_MASK)
-#define IS_PPS_LOCKED(x)     ((x) & LOCK_MASK)
-#define IS_MAG_FAILED(x)     ((x) & FAILURE_MASK)
+/** Macros to get status of an MFAM record.
+ * Example:
+ *     MfamSpiPacket *packet  = GetAPacketSomeHow ();
+ *     bool   isPpsReceived   = IS_PPS_RECEIVED (packet->sysstat);
+*/
+#define IS_PPS_RECEIVED(x)   (((x) & PPS_MASK)
+#define IS_PPS_LOCKED(x)     (((x) & LOCK_MASK)
+#define IS_MAG_FAILED(x)     (((x) & FAILURE_MASK)
 
-// Check individual mag status.
+/* Check individual mag status, for example:
+ *  MfamSpiPacket *packet  = GetAPacketSomehow ();
+ *  bool sensorOneIsDeadZone = IS_DEAD_ZONE (packet->mag1stat);
+*/
 #define DEAD_ZONE_MASK       0x0001
-
-#define IS_DEAD_ZONE(x)     ((x) & DEAD_ZONE_MASK)
+#define IS_DEAD_ZONE(x)     (((x) & DEAD_ZONE_MASK) == DEAD_ZONE_MASK)
 
 #define GET_MAG(x)           (double(x) * MAG_TO_NT)
 
-// ================================================
-// System Status Masks for the sysstat field,
-//    in the packet off of the SPI bus.
+/* ================================================
+ * System Status Masks for the sysstat field,
+ *   in MfamSpiPacket.
+*/
 #define MAIN_STATE_MASK          0x3C00
 #define SUB_STATE_MASK           0x0380
 #define COMPASS_FAILURE_MASK     0x0380
