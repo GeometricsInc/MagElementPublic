@@ -251,8 +251,8 @@ public:
  *     MfamSpiPacket *packet  = GetAPacketSomeHow ();
  *     bool   isCompassRecord = IS_COMPASS (packet->frameid);
 */
-#define IS_COMPASS(x)     ((((x) & AUX_DATA_MASK)==COMPASS_MASK)
-#define IS_GYRO(x)        ((((x) & AUX_DATA_MASK)==GYRO_MASK)
+#define IS_COMPASS(x)     (((x) & AUX_DATA_MASK)==COMPASS_MASK)
+#define IS_GYRO(x)        (((x) & AUX_DATA_MASK)==GYRO_MASK)
 #define IS_ACCEL(x)       (((x)  & AUX_DATA_MASK)==ACCEL_MASK)
 #define IS_SERIAL(x)      (((x)  & AUX_DATA_MASK)==SERIAL_V_MASK)
 
